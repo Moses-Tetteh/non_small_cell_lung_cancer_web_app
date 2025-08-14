@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+{% load static %}
+
+{% block home %}
+<div class="container my-5">
+
+  <!-- Info Card / Initial or Latest Prediction -->
+  <div id="info" class="row justify-content-center mb-4">
+    <div class="col-lg-8">
+      <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+        <img src="{% static 'images/cover.jpg' %}" class="card-img-top" alt="CT Scan Cover" style="object-fit: cover; max-height: 350px;">
+        <div class="card-body text-center p-4">
+          <h3 class="fw-bold text-primary mb-3">Non-Small Cell Lung Cancer Prediction</h3>
+          <p class="text-muted mb-4">
+            Upload an image of the CT scan and let our AI model predict the type of NSCLC along with tailored recommendations for treatment.
+          </p>
+          <div class="alert alert-info small mb-0">
+            <i class="fas fa-clock"></i> Processing time: Approx. <strong>40 seconds</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inline Error Message (hidden by default) -->
+  <div id="error-message" class="row justify-content-center mb-3" style="display:none;">
+    <div class="col-lg-8">
+      <div class="alert alert-danger" role="alert"></div>
+    </div>
+  </div>
+
+  <!-- Loading Animation -->
+  <div id="loading" style="display:none;" class="row justify-content-center mt-5 mb-4">
+    <div class="col-lg-6 text-center">
+      <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <h4 class="mt-4">Processing your image...</h4>
+      <p class="text-muted">Kindly wait a few seconds while we analyze your scan.</p>
+    </div>
+  </div>
+
+
+</div>
+
+<script>
+// Utility to get icon and color class based on prediction type
+function getPredictionStyle(prediction) {
+  switch(prediction?.toLowerCase()) {
+    case 'adenocarcinoma':
+      return {icon: 'fas fa-procedures', color: 'text-danger', badge: 'danger'};
+    case 'large_cell_carcinoma':
+      return {icon: 'fas fa-stethoscope', color: 'text-warning', badge: 'warning'};
+    case 'normal':
+      return {icon: 'fas fa-check-circle', color: 'text-success', badge: 'success'};
+    case 'squamous_cell_carcinoma':
+      return {icon: 'fas fa-notes-medical', color: 'text-info', badge: 'info'};
+    default:
+      return {icon: 'fas fa-question-circle', color: 'text-secondary', badge: 'secondary'};
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.getElementById("scan-upload-form");
+  const fileInput = document.getElementById("default-btn");
+  const scanNowBtn = document.getElementById("scan-now-btn");
+  const infoDiv = document.getElementById("info");
+  const loadingDiv = document.getElementById("loading");
+  const errorDiv = document.getElementById("error-message");
+  const errorAlert = errorDiv.querySelector(".alert");
+  const historyList = document.getElementById("history-list");
+
+  // Show Scan button only when a file is chosen
+  fileInput.addEventListener("change", function(event) {
+    if (fileInput.files.length > 0) {
+      scanNowBtn.style.display = "block";
+    } else {
+      scanNowBtn.style.display = "none";
+    }
+  });
+
+  if (form) {
+    form.addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      // Clear previous errors
+      errorDiv.style.display = "none";
+      errorAlert.textContent = "";
+
+      const formData = new FormData(form);
+
+      // Show loader and hide info
+      infoDiv.style.display = "none";
+      loadingDiv.style.display = "flex";
+
+      fetch("/", {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-CSRFToken": "{{ csrf_token }}",
+          "X-Requested-With": "XMLHttpRequest"
+        }
+      })
+      .then(res => {
+        if (!res.ok) return res.json().then(data => Promise.reject(data));
+        return res.json();
+      })
+      .then(data => {
+        loadingDiv.style.display = "none";
+
+        // Compose styled prediction card
+        const style = getPredictionStyle(data.prediction);
+        const predictionHtml = `
+          <div class="card shadow-lg border-0 rounded-4 overflow-hidden mb-3">
+            ${data.image_url ? `<img src="${data.image_url}" class="card-img-top" alt="CT Scan Result" style="object-fit: cover; max-height: 250px;">` : ''}
+            <div class="card-body p-4 text-center">
+              <h4 class="fw-bold mb-2">
+                <i class="${style.icon} ${style.color} me-2"></i>Prediction Result
+              </h4>
+              <p><span class="badge bg-${style.badge} me-2">${data.prediction || 'Unknown'}</span>
+              Confidence: <strong>${data.confidence || 'N/A'}</strong></p>
+              <div class="alert alert-warning mt-3 mb-0" role="alert">
+                <strong>Recommendation:</strong> ${data.recommendation || 'Consult your doctor.'}
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Update main info with latest prediction
+        infoDiv.innerHTML = `<div class="col-lg-8">${predictionHtml}</div>`;
+        infoDiv.style.display = "flex";
+
+        // Add to history list at the top
+        const historyItem = document.createElement("div");
+        historyItem.innerHTML = predictionHtml;
+        historyList.prepend(historyItem.firstElementChild);
+      })
+      .catch(err => {
+        loadingDiv.style.display = "none";
+        errorAlert.textContent = message;
+        errorDiv.style.display = "block";
+        console.error(err);
+      });
+    });
+  }
+});
+</script>
+{% endblock home %}

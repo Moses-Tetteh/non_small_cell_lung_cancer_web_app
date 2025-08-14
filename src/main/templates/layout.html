@@ -1,0 +1,121 @@
+{% extends "header.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4 align-items-start">
+
+    <!-- Upload Section -->
+    <div class="col-lg-5">
+      <div class="card shadow-sm border-0 text-center p-4">
+        <div class="mb-3">
+          <img id="scan-image"
+               src="{% static 'images/placeholder.png' %}"
+               class="img-fluid rounded"
+               alt="CT Scan Preview">
+        </div>
+
+        <div id="upload-status" class="text-muted mb-3">
+          <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
+          <p class="mb-0">No file chosen yet</p>
+        </div>
+
+        <form id="scan-upload-form" action="/" method="POST" enctype="multipart/form-data">
+          {% csrf_token %}
+          <!-- IMPORTANT: Ensure this name matches your Django form/model field! -->
+          <input id="default-btn" type="file" hidden name="pimage" accept="image/*">
+
+          <!-- Upload Button -->
+          <button type="button" class="btn btn-primary w-100 mb-2"
+                  onclick="document.getElementById('default-btn').click();">
+            Upload a CT Scan Image
+          </button>
+
+          <!-- Scan Now Button (hidden by default) -->
+          <button type="submit" id="scan-now-btn" class="btn btn-success w-100" style="display:none;">
+            Scan Now
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Prediction Info Section -->
+    <div class="col-lg-7">
+      {% block home %}{% endblock %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Loading Modal: PLACE THIS BEFORE YOUR SCRIPT -->
+
+
+<script>
+// Show preview and toggle Scan button on file select
+document.getElementById("default-btn").addEventListener("change", function(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById("scan-image");
+    const statusText = document.getElementById("upload-status");
+    const scanBtn = document.getElementById("scan-now-btn");
+
+    if (file) {
+        preview.src = URL.createObjectURL(file);
+        statusText.innerHTML = `<p class="text-success mb-0">File selected: ${file.name}</p>`;
+        scanBtn.style.display = "block";
+    } else {
+        preview.src = "{% static 'images/placeholder.png' %}";
+        statusText.innerHTML = `<p class="text-muted mb-0">No file chosen yet</p>`;
+        scanBtn.style.display = "none";
+    }
+});
+
+// AJAX form submission with loading modal and response handling
+document.getElementById("scan-upload-form").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+
+    const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+    loadingModal.show();
+
+    fetch("/", {
+        method: "POST",
+        body: formData,
+        headers: {
+            "X-Requested-With": "XMLHttpRequest",
+            "X-CSRFToken": form.querySelector('input[name="csrfmiddlewaretoken"]').value
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        loadingModal.hide();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        // Update prediction info section
+        const infoCol = document.querySelector(".col-lg-7");
+        infoCol.innerHTML = `
+          <div class="card shadow-sm border-0 p-4">
+            <h3 class="fw-bold text-success mb-3">Prediction Result</h3>
+            <p><strong>Type:</strong> ${data.prediction}</p>
+            <p><strong>Confidence:</strong> ${data.confidence}</p>
+            <div class="alert alert-warning mt-4">
+              <strong>Recommendation:</strong> ${data.recommendation}
+            </div>
+            ${data.image_url ? `<img src="${data.image_url}" alt="Scan Image" class="img-fluid mt-3 rounded" style="max-height: 300px;">` : ""}
+          </div>
+        `;
+    })
+    .catch(error => {
+        loadingModal.hide();
+        alert("An error occurred while processing your scan. Please try again.");
+        console.error("Scan submission error:", error);
+    });
+});
+</script>
+
+{% endblock %}

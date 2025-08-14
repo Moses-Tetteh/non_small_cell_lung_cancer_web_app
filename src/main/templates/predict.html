@@ -1,0 +1,69 @@
+<!-- {% extends "layout.html" %}
+{% block home %}
+
+<div id="info" class="col-md-8">
+  <div class="card text-center pb-2">
+    <div class="card-header">
+      <ul class="nav nav-tabs card-header-tabs">
+        <li class="nav-item">
+          <a class="nav-link active" id="tabbtn1" href="#" onclick="javascript:showTab('summary')">Prediction Summary</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" id="tabbtn2" href="#" onclick="javascript:showTab('details')">Treatment Recommendations</a>
+        </li>
+      </ul>
+    </div>
+
+    <div id="summary" class="tab-content p-4" style="display:block;">
+      <h5 class="card-title">{{ prediction|default:"No prediction available yet" }}</h5>
+      {% if prediction %}
+        <p class="card-text">
+          The AI model has classified the uploaded CT scan image as <strong>{{ prediction }}</strong>.
+        </p>
+      {% else %}
+        <p class="card-text text-muted">Upload a CT scan image and click "Scan Now" to get results.</p>
+      {% endif %}
+    </div>
+
+    <div id="details" class="tab-content p-4" style="display:none;">
+      {% if recommendations %}
+        <h6>Treatment Recommendations</h6>
+        <ul class="list-group list-group-flush text-start">
+          {% for rec in recommendations %}
+            <li class="list-group-item">{{ rec }}</li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted">Detailed recommendations will appear here after scan.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="loading" style="display:none;" class="col-md-8">
+  <div class="loader text-center">
+    <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status"></div>
+    <h4 class="mt-3">Processing...</h4>
+    <h5>Please wait a few seconds</h5>
+  </div>
+</div>
+
+<script>
+  function showTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+
+    // Show selected tab content
+    document.getElementById(tabName).style.display = 'block';
+    // Add active class to the clicked tab button
+    if(tabName === 'summary') {
+      document.getElementById('tabbtn1').classList.add('active');
+    } else if(tabName === 'details') {
+      document.getElementById('tabbtn2').classList.add('active');
+    }
+  }
+</script>
+
+{% endblock home %} -->
